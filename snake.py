@@ -30,6 +30,9 @@ class Vec:
 			return (v - self).x 
 		elif d == Dir.L :
 			return self.x +1
+		
+	def move1(self,d) :
+		return self + d.to_Vec()
 
 class Dir(Enum) :
 	U = auto()
@@ -98,7 +101,7 @@ snake = [Vec(5,0)]
 dir = Dir.U
 pills = make_pills(1, GRID)
 slen = 5
-#possible modes : Autoplay, Manual and Play
+#possible modes : Autoplay, Manual, Play, title screen, startgame and endgame
 playmode = "manual"
 level = 1
 show_debug_info = False
@@ -108,7 +111,9 @@ update_interval = 1/20
 	
 def advance() :
 	global snake, pills, slen
-	snake.insert(0,snake[0] + dir.to_Vec())
+	snake.insert(0,snake[0].move1(dir))
+	
+	#snake.insert(0,snake[0] + dir.to_Vec())
 	snake = snake[:slen]
 	if intersects(snake[0], pills) :
 		pills.remove(snake[0])
@@ -172,43 +177,81 @@ def play(dt) :
 		advance()
 
 
+def make_startscreen(b) :
+	bg = pyglet.graphics.Group(order = 0)
+	fg = pyglet.graphics.Group(order = 1)
+	buttons = pyglet.graphics.Group(order = 2)
+	letters = pyglet.graphics.Group(order = 3)
+	return	[ pyglet.text.Label(text= "P",x = wn.width/2.46 ,y =  wn.height/2.55, width=20, height=20, color=(255,255,255,255),batch = b, group = letters)
+			, pyglet.shapes.Rectangle(0,0, wn.width, wn.height, color = (255,255,255), batch = b, group = bg )
+			, pyglet.text.Label(text = "S N A K E",font_size = 36,x = wn.width/2, y = wn.height/2, anchor_x = 'center',anchor_y = 'bottom',color = (0,0,0,255), batch = b, group = fg)
+			, pyglet.text.Label(text = "P L A Y",x = wn.width/2, y = wn.height/2.55, anchor_x = 'center',color = (0,0,0,255), batch = b, group = fg)
+			, pyglet.text.Label(text = "O P T I O N S",x = wn.width/2, y = wn.height/2.95, anchor_x = 'center',color = (0,0,0,255), batch = b, group = fg)
+			, pyglet.shapes.Rectangle(x = wn.width/2.5 ,y =  wn.height/2.6, width=20, height=20, color=(0,0,0),batch = b, group = buttons)
+			, pyglet.shapes.Rectangle(x = wn.width/2.5 ,y =  wn.height/3, width=20, height=20, color=(0,0,0),batch = b, group = buttons)
+			, pyglet.text.Label(text= "O",x = wn.width/2.47 ,y =  wn.height/2.94, width=20, height=20, color=(255,255,255,255),batch = b, group = letters)
+			]
+
 	
-	
+#	square3 = pyglet.shapes.Rectangle(x = wn.width/2.5 ,y =  wn.height/3.6, width=20, height=20, color=(0,0,0),batch = batch, group = buttons)
+#	pyglet.text.Label(text = "Q U I T",x = wn.width/2, y = wn.height/3.5, anchor_x = 'center',color = (0,0,0,255), batch = b, group = fg)
+#	letter3 = pyglet.text.Label(text= "Q",x = wn.width/2.47 ,y =  wn.height/3.5, width=20, height=20, color=(255,255,255,255),batch = batch, group = letters)
 
 
 wn = pyglet.window.Window(width = GRID.x * GRID_STEP + 1, height = GRID.y * GRID_STEP, resizable = True)
+
+
 batch = pyglet.graphics.Batch()
+
+playmode = "titlescreen"
+startscreen = None
+label = pyglet.text.Label()
+if playmode == "titlescreen" :
+	startscreen = make_startscreen(batch) 
+
+elif playmode == "startgame" :
+	batch = pyglet.graphics.Batch()
+
+else :
+
+	label = pyglet.text.Label(text = "",x = GRID.x * GRID_STEP - 10, y = GRID_STEP, anchor_x = 'right', batch = batch)
+
 fps = pyglet.window.FPSDisplay(wn)
-label = pyglet.text.Label(text = "",x = GRID.x * GRID_STEP - 10, y = GRID_STEP, anchor_x = 'right', batch = batch)
 
 time_passed_since_last_step = 0
 
 
 def update(dt) :
 	global time_passed_since_last_step
-	if playmode == "autoplay" :
-		auto_play(dt)
-	elif playmode == "play" :
-		time_passed_since_last_step = dt + time_passed_since_last_step
-		if time_passed_since_last_step > update_interval :
-			time_passed_since_last_step = 0
-			play(dt)
-			
-	label.text = "{speed} {x}, {y} : {d}, {l} : lvl {lvl} | {mode}".format(speed = update_interval, x = snake[0].x, y = snake[0].y, d = snake[0].distance(GRID, dir), l = slen,lvl = level, mode = playmode)
+	if playmode == "titlescreen" :
+		pass
+	else :
+		if playmode == "autoplay" :
+			auto_play(dt)
+		elif playmode == "play" :
+			time_passed_since_last_step = dt + time_passed_since_last_step
+			if time_passed_since_last_step > update_interval :
+				time_passed_since_last_step = 0
+				play(dt)
+				
+		label.text = "{speed} {x}, {y} : {d}, {l} : lvl {lvl} | {mode}".format(speed = update_interval, x = snake[0].x, y = snake[0].y, d = snake[0].distance(GRID, dir), l = slen,lvl = level, mode = playmode)
 	
 @wn.event
 def on_draw() :
-	
 	wn.clear()
-	pill = [pyglet.shapes.Rectangle(g.x * GRID_STEP, g.y * GRID_STEP, GRID_STEP, GRID_STEP, color = (55,255,255), batch = batch) for g in pills]
-	l = [pyglet.shapes.Rectangle(g.x * GRID_STEP, g.y * GRID_STEP, GRID_STEP, GRID_STEP, color = (55,55,255), batch = batch) for g in reversed(snake)]
-	l[-1].color = (125,44,227)
-	fps.draw()
+	if playmode == "titlescreen" :
+		pass
+	else :
+		pill = [pyglet.shapes.Rectangle(g.x * GRID_STEP, g.y * GRID_STEP, GRID_STEP, GRID_STEP, color = (55,255,255), batch = batch) for g in pills]
+		l = [pyglet.shapes.Rectangle(g.x * GRID_STEP, g.y * GRID_STEP, GRID_STEP, GRID_STEP, color = (55,55,255), batch = batch) for g in reversed(snake)]
+		l[-1].color = (125,44,227)
+		fps.draw()
+	
 	batch.draw()
 	
 @wn.event
 def on_key_press(symbol, modifiers):
-	global dir , playmode, update_interval
+	global dir , playmode, update_interval, startscreen, batch
 	
 	match symbol : 
 		case key.A :
@@ -231,13 +274,34 @@ def on_key_press(symbol, modifiers):
 		case key.M :
 			playmode = "manual"
 		
-		case key.O :
+		case key.U :
 			update_interval = update_interval + 0.01
-		case key.P :
+		case key.Z :
 			update_interval = update_interval - 0.01
 			
 		case key.I :
 			show_debug_info = True
+			
+		case key.Q :
+			playmode = "titlescreen"
+			startscreen = make_startscreen(batch)
+			
+	if playmode == "titlescreen" :
+		match symbol :
+			case key.P :
+
+		 
+				playmode = "play"
+				del startscreen
+		 
+		
+				batch = pyglet.graphics.Batch()
+				print("switching to play mode")
+			
+			case key.O :
+				playmode = "options"
+				
+
 			
 	if playmode == "manual" :
 		manual_play()
